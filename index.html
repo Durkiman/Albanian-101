@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Albanian Learning Roadmap</title>
+    <!-- Chosen Palette: Warm Neutrals (e.g., beige, stone, with a muted terracotta accent) -->
+    <!-- Application Structure Plan: A single-page dashboard with a fixed sidebar for navigating between six weekly learning blocks, a 'Vocabulary Overview' tab, a 'Phrase Generator' tab, and a new 'Alphabet Overview' tab. Each week's content is presented in interactive modules (flashcards for vocab, accordions for grammar, inline quizzes for practice) to make learning engaging and reduce cognitive load. The 'Vocabulary Overview' tab provides a searchable and sortable list. The 'Phrase Generator' tab explicitly houses the Gemini API feature. The new 'Alphabet Overview' tab offers a dedicated space for mastering pronunciation. This structured approach ensures clear navigation and proper content visibility. -->
+    <!-- Visualization & Content Choices: Content is organized into thematic weeks. Goal: Inform -> Grammar rules in accordions, Vocabulary in interactive flashcards, Alphabet in a detailed table with highlighted difficult letters. Goal: Practice -> 'Self-Study Challenges' converted to interactive fill-in-the-blanks with instant feedback, including 'Show Hint' and 'Show Answers' buttons. New 'Show Full Conjugation' for Jam/Kam verbs. New written dialogue practice. Goal: Visualize Progress -> A donut chart (Chart.js) for each week shows the breakdown of learning activities (Grammar, Vocab, Practice). New Goal: Vocabulary Consolidation & Review -> A table with search and sort functionality. New Goal: Generate Contextual Phrases -> A text input and button trigger a call to the Gemini API. Simple yet effective placeholder images (placehold.co) are added to visualize topics. CONFIRMING NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfaf7;
+            color: #3f3c3a;
+        }
+        .sidebar {
+            background-color: #f4ece6;
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Added subtle shadow */
+        }
+        .nav-link {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        .nav-link.active {
+            background-color: #eaddd7;
+            border-left-color: #d57a66;
+            color: #3f3c3a;
+            font-weight: 600;
+        }
+        .nav-link:hover {
+            background-color: #eaddd7;
+        }
+        /* Style for parent week toggles in sidebar */
+        .sidebar-parent-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.625rem 1rem; /* py-2.5 px-4 */
+            width: 100%;
+            cursor: pointer;
+            font-weight: 500;
+            color: #3f3c3a;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .sidebar-parent-toggle.active {
+            background-color: #eaddd7;
+            border-left-color: #d57a66;
+            font-weight: 600;
+        }
+        .sidebar-parent-toggle:hover {
+            background-color: #eaddd7;
+        }
+        .sidebar-submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: #fcf8f6; /* Slightly different background for submenu */
+        }
+        .sidebar-submenu .nav-link {
+            padding-left: 2.5rem; /* Indent sub-links */
+            font-size: 0.95rem;
+            color: #575350;
+        }
+        .sidebar-submenu .nav-link.active {
+            font-weight: 500;
+            color: #3f3c3a;
+            background-color: #f0e5dd;
+            border-left-color: #d57a66;
+        }
+
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #f0e5dd;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .flashcard-container {
+            perspective: 1000px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #eaddd7;
+        }
+        .flashcard-front {
+            background-color: #f4ece6;
+        }
+        .flashcard-back {
+            background-color: #eaddd7;
+            transform: rotateY(180deg);
+        }
+        /* Style for nested accordions (still used within Theory Deep Dive pages) */
+        .accordion-nested > .accordion-header {
+            background-color: #ffffff; /* White background for nested accordions */
+            border-color: #eaddd7;
+            border-radius: 0.5rem;
+            font-weight: 500; /* Slightly less bold */
+            padding: 0.75rem 1rem; /* Smaller padding */
+        }
+        .accordion-nested > .accordion-content {
+            border: 1px solid #eaddd7;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            padding: 0.75rem 1rem; /* Smaller padding */
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        /* Base styling for chart container - now primarily controlled by Tailwind classes on the div */
+        .chart-container {
+            position: relative;
+        }
+        .practice-controls button {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        /* Ensure input fields are wide enough and wrap text if needed */
+        .practice-input {
+            min-width: 100px; /* Minimum width for visibility */
+            max-width: 100%; /* Ensure it doesn't overflow container */
+        }
+        textarea.practice-input {
+            height: auto; /* Allow textarea to grow */
+            min-height: 50px; /* Minimum height */
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 40;
+                position: fixed;
+                height: 100%;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="relative min-h-screen md:flex">
+        <!-- Mobile menu button -->
+        <div class="md:hidden flex justify-between p-4 bg-white shadow-md">
+            <h1 class="text-xl font-bold text-[#d57a66]">Albanian Roadmap</h1>
+            <button id="mobile-menu-button" class="text-gray-800">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </div>
+
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0">
+            <a href="#" class="text-[#d57a66] flex items-center px-4">
+                <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-5.22-6.222h10.44"></path><path d="M12 21a9 9 0 100-18 9 9 0 000 18z"></path></svg>
+                <span class="text-xl font-bold">Learning Plan</span>
+            </a>
+            <nav id="nav-menu">
+                <!-- Week 1 Navigation -->
+                <div class="week-nav-group">
+                    <a href="#week1-overview" class="sidebar-parent-toggle group">
+                        <span>Week 1: Foundations</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week1-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Overview</a>
+                        <a href="#week1-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Exercises</a>
+                        <a href="#week1-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Theory Deep Dive</a>
+                        <a href="#week1-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Example Sentences</a>
+                        <a href="#week1-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Pronunciation Focus</a>
+                        <a href="#week1-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week1">Cultural Insights</a>
+                    </div>
+                </div>
+
+                <!-- Week 2 Navigation -->
+                <div class="week-nav-group">
+                    <a href="#week2-overview" class="sidebar-parent-toggle group">
+                        <span>Week 2: Nouns</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week2-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Overview</a>
+                        <a href="#week2-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Exercises</a>
+                        <a href="#week2-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Theory Deep Dive</a>
+                        <a href="#week2-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Example Sentences</a>
+                        <a href="#week2-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Pronunciation Focus</a>
+                        <a href="#week2-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week2">Cultural Insights</a>
+                    </div>
+                </div>
+
+                <!-- Week 3 Navigation -->
+                <div class="week-nav-group">
+                    <a href="#week3-overview" class="sidebar-parent-toggle group">
+                        <span>Week 3: Daily Actions</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week3-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Overview</a>
+                        <a href="#week3-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Exercises</a>
+                        <a href="#week3-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Theory Deep Dive</a>
+                        <a href="#week3-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Example Sentences</a>
+                        <a href="#week3-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Pronunciation Focus</a>
+                        <a href="#week3-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week3">Cultural Insights</a>
+                    </div>
+                </div>
+
+                <!-- Week 4 Navigation (Placeholder) -->
+                <div class="week-nav-group">
+                    <a href="#week4-overview" class="sidebar-parent-toggle group">
+                        <span>Week 4: Ongoing Actions</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week4-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Overview</a>
+                        <a href="#week4-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Exercises</a>
+                        <a href="#week4-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Theory Deep Dive</a>
+                        <a href="#week4-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Example Sentences</a>
+                        <a href="#week4-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Pronunciation Focus</a>
+                        <a href="#week4-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week4">Cultural Insights</a>
+                    </div>
+                </div>
+
+                <!-- Week 5 Navigation (Placeholder) -->
+                <div class="week-nav-group">
+                    <a href="#week5-overview" class="sidebar-parent-toggle group">
+                        <span>Week 5: Possessions</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week5-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Overview</a>
+                        <a href="#week5-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Exercises</a>
+                        <a href="#week5-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Theory Deep Dive</a>
+                        <a href="#week5-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Example Sentences</a>
+                        <a href="#week5-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Pronunciation Focus</a>
+                        <a href="#week5-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week5">Cultural Insights</a>
+                    </div>
+                </div>
+
+                <!-- Week 6 Navigation (Placeholder) -->
+                <div class="week-nav-group">
+                    <a href="#week6-overview" class="sidebar-parent-toggle group">
+                        <span>Week 6: Past Actions</span>
+                        <span class="transform transition-transform duration-300 group-[.active]:rotate-180">&#9662;</span>
+                    </a>
+                    <div class="sidebar-submenu">
+                        <a href="#week6-overview" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Overview</a>
+                        <a href="#week6-exercises" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Exercises</a>
+                        <a href="#week6-theory" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Theory Deep Dive</a>
+                        <a href="#week6-examples" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Example Sentences</a>
+                        <a href="#week6-pronunciation" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Pronunciation Focus</a>
+                        <a href="#week6-cultural" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium" data-parent-week="week6">Cultural Insights</a>
+                    </div>
+                </div>
+
+
+                <!-- Global Navigation -->
+                <a href="#alphabet" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium">Alphabet Overview</a>
+                <a href="#vocabulary" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium">Vocabulary Overview</a>
+                <a href="#phrase-generator" class="nav-link w-full block py-2.5 px-4 rounded text-gray-700 font-medium">Phrase Generator</a>
+            </nav>
+        </div>
+
+        <!-- Main content -->
+        <main class="flex-1 p-4 sm:p-6 md:p-10">
+            <!-- Week 1 Content - Overview -->
+            <div id="week1-overview-content" class="week-content">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Foundations - Sounds & Greetings</h1>
+                <p class="text-lg text-gray-600 mb-6">Welcome to your first week of Albanian! This week is dedicated to building the fundamental blocks of the language. We'll explore the unique sounds of the Albanian alphabet, master essential greetings, and get comfortable with the two most crucial verbs: 'to be' and 'to have'.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 md:col-span-3 text-center">
+                        <img src="https://placehold.co/400x200/eaddd7/3f3c3a?text=Welcome+to+Albanian!" alt="Welcome to Albanian language learning" class="w-full h-auto rounded-lg mb-4 object-cover">
+                        <p class="text-gray-600 italic">Starting your journey in Albanian language learning.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Goals for this Week</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Master the pronunciation of the Albanian alphabet's core sounds.</li>
+                            <li>Confidently use basic greetings and self-introductions.</li>
+                            <li>Understand and apply the foundational verbs "to be" (jam) and "to have" (kam) in simple present tense sentences.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Weekly Focus</h2>
+                        <div class="chart-container w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto h-64 sm:h-72 md:h-80 lg:h-96">
+                           <canvas id="week1Chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Key Takeaways & Highlights</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>The Albanian alphabet has 36 letters, including digraphs (two letters forming one sound).</li>
+                            <li>'Jam' and 'Kam' are irregular but essential verbs; memorize their conjugations.</li>
+                            <li>Negation is simple: add 'nuk' before the verb (e.g., 'nuk jam' - I am not).</li>
+                            <li>Kosovarian Albanian often uses 'asht' for 'is' instead of 'është'.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Brief Cultural Spotlight: Greetings</h2>
+                        <p class="text-gray-700">Greetings in Albanian culture are important. While "Përshëndetje" (hello) is common, you'll hear "Mirëmëngjes" (good morning), "Mirëdita" (good day), "Mirëmbrëma" (good evening), and "Mirëupafshim" (goodbye) frequently. Direct eye contact is generally a sign of sincerity and respect during conversations.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Why This Week Matters</h2>
+                        <p class="text-gray-700">Mastering these foundations will immediately allow you to introduce yourself, ask basic questions, and understand common responses. This builds confidence and provides the necessary tools for all future learning. Think of "jam" and "kam" as the glue that holds many simple Albanian sentences together!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 1 Content - Exercises -->
+            <div id="week1-exercises-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Exercises - Practice Your Foundations</h1>
+                <p class="text-lg text-gray-600 mb-6">Time to put your knowledge from Week 1 to the test! These exercises will help you solidify your understanding of Albanian pronunciation, greetings, and the verbs 'to be' and 'to have'.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Conjugate "Jam" (to be)</h2>
+                        <p class="mb-4 text-gray-600">Complete the sentences with the correct form of the verb "jam". Check your answers below.</p>
+                        <div class="space-y-3" data-practice-type="jam-conjugation">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Unë</span>
+                                <input type="text" data-answer="jam" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ti</span>
+                                <input type="text" data-answer="je" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ai/Ajo</span>
+                                <input type="text" data-answer="asht" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Na</span>
+                                <input type="text" data-answer="jemi" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ju</span>
+                                <input type="text" data-answer="jeni" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ata/Ato</span>
+                                <input type="text" data-answer="janë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Remember to match the verb form to the personal pronoun.</div>
+                           <div class="full-conjugation hidden mt-2 p-2 bg-stone-100 rounded-md">
+                                <p class="font-bold">Full Conjugation of "Jam":</p>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Unë jam</li>
+                                    <li>Ti je</li>
+                                    <li>Ai/Ajo asht</li>
+                                    <li>Na jemi</li>
+                                    <li>Ju jeni</li>
+                                    <li>Ata/Ato janë</li>
+                                </ul>
+                           </div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                            <button class="toggle-conjugation-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Full Conjugation</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Conjugate "Kam" (to have)</h2>
+                        <p class="mb-4 text-gray-600">Complete the sentences with the correct form of the verb "kam". Check your answers below.</p>
+                        <div class="space-y-3" data-practice-type="kam-conjugation">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Unë</span>
+                                <input type="text" data-answer="kam" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ti</span>
+                                <input type="text" data-answer="ke" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ai/Ajo</span>
+                                <input type="text" data-answer="ka" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Na</span>
+                                <input type="text" data-answer="kemi" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ju</span>
+                                <input type="text" data-answer="keni" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-8">Ata/Ato</span>
+                                <input type="text" data-answer="kanë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Pay attention to how the 'k' sound changes in some conjugations.</div>
+                           <div class="full-conjugation hidden mt-2 p-2 bg-stone-100 rounded-md">
+                                <p class="font-bold">Full Conjugation of "Kam":</p>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Unë kam</li>
+                                    <li>Ti ke</li>
+                                    <li>Ai/Ajo ka</li>
+                                    <li>Na kemi</li>
+                                    <li>Ju keni</li>
+                                    <li>Ata/Ato kanë</li>
+                                </ul>
+                           </div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                            <button class="toggle-conjugation-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Full Conjugation</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Practice: Basic Greetings Dialogue</h2>
+                        <p class="mb-4 text-gray-600">Fill in the blanks to complete this simple greeting dialogue. Check your answers.</p>
+                        <div class="space-y-3" data-practice-type="greeting-dialogue">
+                            <p><strong>Person A:</strong> Përshëndetje! Si <input type="text" data-answer="je" class="practice-input inline-block w-20 p-1 border border-gray-300 rounded-md text-sm">?</p>
+                            <p><strong>Person B:</strong> Mirë, <input type="text" data-answer="jam" class="practice-input inline-block w-20 p-1 border border-gray-300 rounded-md text-sm">. Po ti?</p>
+                            <p><strong>Person A:</strong> Edhe unë <input type="text" data-answer="jam" class="practice-input inline-block w-20 p-1 border border-gray-300 rounded-md text-sm"> mirë. Qysh e ki <input type="text" data-answer="emrin" class="practice-input inline-block w-20 p-1 border border-gray-300 rounded-md text-sm">?</p>
+                            <p><strong>Person B:</strong> Emri jem asht [Emri yt]. <input type="text" data-answer="Faleminderit" class="practice-input inline-block w-28 p-1 border border-gray-300 rounded-md text-sm">!</p>
+                            <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Think about the common responses for "How are you?" and "What's your name?".</div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Vocabulary Flashcards: Greetings</h2>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="week1-vocab">
+                            <!-- Flashcards will be injected here by JS -->
+                        </div>
+                        <p class="text-center text-sm text-gray-500 mt-4">Click a card to flip it!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 1 Content - Theory Deep Dive -->
+            <div id="week1-theory-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Theory Deep Dive - Mastering Foundations</h1>
+                <p class="text-lg text-gray-600 mb-6">This section provides detailed explanations of the grammar and pronunciation concepts introduced in Week 1. Take your time to review these principles for a solid understanding.</p>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Core Grammar & Concepts</h2>
+                        <div class="accordion accordion-nested">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>The Albanian Alphabet (Brief Review)</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Albanian uses a Latin-based alphabet with 36 letters, including several unique digraphs (two letters representing a single sound). It is largely phonetic, meaning words are pronounced as they are written.</p>
+                                <p class="mt-2">Key points for Week 1:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Focus on understanding the sounds of <strong>A, E, I, O, U, Y, Ë</strong> (vowels) and <strong>M, N, J, L, S, T, D</strong> (common consonants).</li>
+                                    <li>Pay special attention to 'Ë', which is a schwa sound (like 'a' in 'about') and is often silent at the end of words but affects preceding consonant pronunciation.</li>
+                                    <li>For a complete list and detailed pronunciation guide, refer to the <a href="#alphabet" class="text-[#d57a66] underline">Alphabet Overview</a> tab.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Verbs: Jam (to be) & Kam (to have)</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>These two verbs are fundamental to forming basic sentences and expressing existence or possession. They are irregular, meaning their conjugations don't always follow a standard pattern, so memorization is key.</p>
+                                <p class="mt-2 font-bold">Conjugation of "Jam" (to be) - Present Tense:</p>
+                                <table class="min-w-full divide-y divide-gray-200 mt-2">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pronoun</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verb Form</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">English</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-3 py-2">Unë</td><td>jam</td><td>I am</td></tr>
+                                        <tr><td class="px-3 py-2">Ti</td><td>je</td><td>You are (singular, informal)</td></tr>
+                                        <tr><td class="px-3 py-2">Ai / Ajo</td><td>asht / është</td><td>He / She is (Kosovarian uses 'asht' more commonly)</td></tr>
+                                        <tr><td class="px-3 py-2">Na</td><td>jemi</td><td>We are</td></tr>
+                                        <tr><td class="px-3 py-2">Ju</td><td>jeni</td><td>You are (plural, or singular formal)</td></tr>
+                                        <tr><td class="px-3 py-2">Ata / Ato</td><td>janë</td><td>They are (masculine / feminine)</td></tr>
+                                    </tbody>
+                                </table>
+
+                                <p class="mt-4 font-bold">Conjugation of "Kam" (to have) - Present Tense:</p>
+                                <table class="min-w-full divide-y divide-gray-200 mt-2">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pronoun</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verb Form</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">English</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-3 py-2">Unë</td><td>kam</td><td>I have</td></tr>
+                                        <tr><td class="px-3 py-2">Ti</td><td>ke</td><td>You have (singular, informal)</td></tr>
+                                        <tr><td class="px-3 py-2">Ai / Ajo</td><td>ka</td><td>He / She has</td></tr>
+                                        <tr><td class="px-3 py-2">Na</td><td>kemi</td><td>We have</td></tr>
+                                        <tr><td class="px-3 py-2">Ju</td><td>keni</td><td>You have (plural, or singular formal)</td></tr>
+                                        <tr><td class="px-3 py-2">Ata / Ato</td><td>kanë</td><td>They have</td></tr>
+                                    </tbody>
+                                </table>
+
+                                <p class="mt-4"><strong>Negation:</strong> To make a sentence negative, simply place 'nuk' (not) before the verb. For verbs starting with a vowel, 'nuk' often shortens to 's''.</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Unë nuk jam. (I am not.)</li>
+                                    <li>Ata nuk kanë. (They don't have.)</li>
+                                    <li>Ti s'je i lodhur. (You are not tired. - 's' before 'je')</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 1 Content - Example Sentences -->
+            <div id="week1-examples-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Example Sentences - Putting it All Together</h1>
+                <p class="text-lg text-gray-600 mb-6">See how the grammar and vocabulary from Week 1 are used in practical sentences. Pay attention to verb conjugations and the placement of words.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Greetings & Introductions</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Përshëndetje! Si je? (Hello! How are you?)</li>
+                            <li>Mirë, jam. Po ti? (Good, I am. And you?)</li>
+                            <li>Edhe unë jam mirë. (I am also good.)</li>
+                            <li>Qysh e ki emrin? (What's your name?)</li>
+                            <li>Emri jem asht [Emri yt]. (My name is [Your Name].)</li>
+                            <li>Prej nga je? (Where are you from?)</li>
+                            <li>Jam prej Prishtinës. (I am from Pristina.)</li>
+                            <li>Faleminderit! (Thank you!)</li>
+                            <li>S'ka përse! (You're welcome!)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Using "Jam" (to be)</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë jam student. (I am a student.)</li>
+                            <li>Ti je e lodhur. (You are tired - feminine.)</li>
+                            <li>Ai asht i zënë. (He is busy.)</li>
+                            <li>Ajo asht në shpi. (She is at home.)</li>
+                            <li>Na jemi prej Kosovës. (We are from Kosovo.)</li>
+                            <li>Ju jeni gati? (Are you ready?)</li>
+                            <li>Ata janë shokë. (They are friends.)</li>
+                            <li>Ato janë mësuese. (They are teachers - feminine.)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Using "Kam" (to have)</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë kam një motër. (I have a sister.)</li>
+                            <li>Ti ke një vëlla. (You have a brother.)</li>
+                            <li>Ai ka një kerr të ri. (He has a new car.)</li>
+                            <li>Ajo ka kohë. (She has time.)</li>
+                            <li>Na kemi dy libra. (We have two books.)</li>
+                            <li>Ju keni pyetje? (Do you have questions?)</li>
+                            <li>Ata kanë shumë punë. (They have a lot of work.)</li>
+                            <li>Ato kanë ide të mira. (They have good ideas.)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 1 Content - Pronunciation Focus -->
+            <div id="week1-pronunciation-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Pronunciation Focus - Mastering Initial Sounds</h1>
+                <p class="text-lg text-gray-600 mb-6">Getting the basic sounds right is crucial for clear communication. This section highlights common pronunciation challenges for Week 1's vocabulary and provides tips.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Focus Sounds for Week 1</h2>
+                        <ul class="list-disc list-inside space-y-3 text-gray-700">
+                            <li><strong>Ë (Schwa):</strong> This is perhaps the most unique Albanian vowel. It's often unstressed, like the 'a' in 'about'. At the end of words (e.g., 'bukë'), it can be almost silent. Practice saying words like 'bukë' (bread) and 'këngë' (song), trying to barely pronounce the final 'ë'.</li>
+                            <li><strong>R vs Rr:</strong> Albanian has two 'R' sounds. The single 'R' is a soft, tapped 'r' (like in Spanish 'pero'). The 'Rr' is a strong, rolled 'r' (like in Spanish 'perro' or Scottish 'r'). Practice 'rrugë' (road - with Rr) vs. just a tap.</li>
+                            <li><strong>J:</strong> Pronounced like the 'y' in 'yes' or 'yogurt'. (e.g., 'jam' - I am, 'je' - you are).</li>
+                            <li><strong>K:</strong> Often very crisp and slightly aspirated, similar to English but sometimes more emphatic.</li>
+                            <li><strong>Th:</strong> Like the 'th' in 'think' (unvoiced). (e.g., 'thjeshtë' - simple).</li>
+                            <li><strong>Dh:</strong> Like the 'th' in 'this' (voiced). (e.g., 'dhuratë' - gift).</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Tips for Clear Pronunciation</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong>Listen Actively:</strong> Pay close attention to native speakers, especially for the 'ë' and the two 'r' sounds. Online dictionaries with audio are invaluable.</li>
+                            <li><strong>Slow Down:</strong> Don't rush your pronunciation, especially when starting. Articulate each sound clearly.</li>
+                            <li><strong>Mimic:</strong> Try to mimic the intonation and rhythm of Albanian speakers, not just individual sounds.</li>
+                            <li><strong>Practice Minimal Pairs:</strong> Find words that differ only by one sound you're struggling with (e.g., 'rrugë' vs. a word with 'R') to train your ear and mouth.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 1 Content - Cultural Insights -->
+            <div id="week1-cultural-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 1: Cultural Insights - Initial Interactions</h1>
+                <p class="text-lg text-gray-600 mb-6">Language is deeply connected to culture. Understanding social norms around initial interactions will greatly enhance your Albanian learning journey.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">The Importance of Politeness</h2>
+                        <p class="text-gray-700">Albanians generally value politeness and respect, especially in initial interactions or with elders. Using formal "Ju" (you plural/formal) when addressing someone you don't know well or who is older is a good practice, though "Ti" (you singular/informal) is common among peers and younger people. When in doubt, it's safer to start with "Ju."</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Eye Contact & Handshakes</h2>
+                        <p class="text-gray-700">Direct eye contact during conversation is seen as a sign of sincerity and engagement. When meeting someone for the first time, a firm handshake is standard. Among close friends and family, air kisses on both cheeks are common (starting with the right cheek, then the left).</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Initial Questions</h2>
+                        <p class="text-gray-700">After greetings, it's common to ask "Si je?" (How are you?) or "Si jeni?" (How are you? - formal/plural). Showing interest in the other person's well-being is a sign of good manners. Don't be surprised if the conversation quickly moves to family, as family is a cornerstone of Albanian society.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Overview -->
+            <div id="week2-overview-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Nouns & Basic Descriptions</h1>
+                <p class="text-lg text-gray-600 mb-6">This week, we dive into the building blocks of sentences: nouns. You'll learn how to identify noun gender, use definite and indefinite articles (like 'a' vs 'the'), form basic plurals, and expand your vocabulary with common objects and family members.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 md:col-span-3 text-center">
+                        <img src="https://placehold.co/400x200/f4ece6/3f3c3a?text=Nouns+Everywhere!" alt="Illustration of various objects to represent nouns" class="w-full h-auto rounded-lg mb-4 object-cover">
+                        <p class="text-gray-600 italic">Identifying objects and people around us.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Goals for this Week</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Understand the concept of noun gender in Albanian (masculine and feminine).</li>
+                            <li>Correctly form definite and indefinite articles for nouns.</li>
+                            <li>Begin to understand and form basic plural nouns.</li>
+                            <li>Expand vocabulary related to common objects and family.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Weekly Focus</h2>
+                        <div class="chart-container w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto h-64 sm:h-72 md:h-80 lg:h-96">
+                           <canvas id="week2Chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Key Takeaways & Highlights</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>All Albanian nouns have a gender: masculine or feminine. This affects articles and adjectives.</li>
+                            <li>Articles are suffixes attached to nouns for the definite form ('the').</li>
+                            <li>Indefinite articles (like 'a/an') use 'një' before the noun.</li>
+                            <li>Plural formation has patterns but can be irregular; focus on common endings.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Brief Cultural Spotlight: Family Terms</h2>
+                        <p class="text-gray-700">Family is central to Albanian life. Knowing terms like 'baba' (father), 'nanë' (mother), 'motër' (sister), 'vëlla' (brother) is essential. There are also specific terms for aunts and uncles depending on which side of the family they come from (e.g., 'hallë' vs. 'tezë'), highlighting the strong family bonds.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Why This Week Matters</h2>
+                        <p class="text-gray-700">Understanding noun gender and how to use articles is fundamental for building grammatically correct sentences. This week enables you to describe objects and people, ask about them, and generally expand your descriptive abilities in Albanian, which is vital for any conversation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Exercises -->
+            <div id="week2-exercises-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Exercises - Nouns in Action</h1>
+                <p class="text-lg text-gray-600 mb-6">Practice identifying noun gender, forming definite articles, and recognizing plurals with these interactive exercises.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Noun Gender & Definite Forms</h2>
+                        <p class="mb-4 text-gray-600">Convert the indefinite nouns to their definite singular form. Indicate gender (M/F).</p>
+                        <div class="space-y-3" data-practice-type="noun-forms">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">një libër (a book)</span>
+                                <input type="text" data-answer="libri" class="practice-input w-full p-2 border border-gray-300 rounded-md" placeholder="Definite form">
+                                <input type="text" data-answer="m" class="practice-input w-16 p-2 border border-gray-300 rounded-md" placeholder="M/F">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">një shtëpi (a house)</span>
+                                <input type="text" data-answer="shtëpia" class="practice-input w-full p-2 border border-gray-300 rounded-md" placeholder="Definite form">
+                                <input type="text" data-answer="f" class="practice-input w-16 p-2 border border-gray-300 rounded-md" placeholder="M/F">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">një park (a park)</span>
+                                <input type="text" data-answer="parku" class="practice-input w-full p-2 border border-gray-300 rounded-md" placeholder="Definite form">
+                                <input type="text" data-answer="m" class="practice-input w-16 p-2 border border-gray-300 rounded-md" placeholder="M/F">
+                            </div>
+                             <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">një tavolinë (a table)</span>
+                                <input type="text" data-answer="tavolina" class="practice-input w-full p-2 border border-gray-300 rounded-md" placeholder="Definite form">
+                                <input type="text" data-answer="f" class="practice-input w-16 p-2 border border-gray-300 rounded-md" placeholder="M/F">
+                            </div>
+                            <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Remember, masculine nouns often end in -i or -u in definite, feminine in -a.</div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Vocabulary Flashcards: Nouns & Family</h2>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="week2-vocab">
+                            <!-- Flashcards will be injected here by JS -->
+                        </div>
+                        <p class="text-center text-sm text-gray-500 mt-4">Click a card to flip it!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Theory Deep Dive -->
+            <div id="week2-theory-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Theory Deep Dive - Nouns & Descriptions</h1>
+                <p class="text-lg text-gray-600 mb-6">Delve deeper into the rules governing Albanian nouns, including gender, articles, and pluralization. These are crucial for building complex sentences.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Core Grammar Concepts</h2>
+                        <div class="accordion accordion-nested">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Nouns & Gender</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>All Albanian nouns are either <strong>Masculine (Mashkullor)</strong> or <strong>Feminine (Femëror)</strong>. This inherent gender affects the definite articles, indefinite articles, and adjectives that accompany the noun.</p>
+                                <p class="mt-2 font-bold">General Rules for Gender (with exceptions):</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>Masculine Nouns:</strong> Often end in a consonant (e.g., 'libër' - book, 'mal' - mountain, 'qytet' - city) or sometimes in '-ë' (e.g., 'djalë' - boy).</li>
+                                    <li><strong>Feminine Nouns:</strong> Often end in a vowel, most commonly '-a', '-e', or '-i' (e.g., 'shtëpi' - house, 'tavolinë' - table, 'vajzë' - girl).</li>
+                                </ul>
+                                <p class="mt-2">It's best to learn the gender of a noun along with the noun itself.</p>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Definite and Indefinite Articles</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Unlike English, where 'the' is a separate word, in Albanian, the definite article is a suffix attached directly to the noun. The indefinite article 'a/an' is a separate word.</p>
+                                <p class="mt-2 font-bold">Indefinite Article (a/an):</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Use <strong>'një'</strong> before the noun, regardless of gender.</li>
+                                    <li>Examples: <em>një libër</em> (a book), <em>një shtëpi</em> (a house), <em>një telefon</em> (a phone).</li>
+                                </ul>
+                                <p class="mt-4 font-bold">Definite Article (the):</p>
+                                <p class="mt-2">The suffix depends on the noun's gender and its ending:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>Masculine Nouns:</strong>
+                                        <ul>
+                                            <li>Ending in consonant: usually <strong>'-i'</strong> (e.g., libër -> libri, mal -> mali)</li>
+                                            <li>Ending in 'k', 'g', 'h': usually <strong>'-u'</strong> (e.g., park -> parku, shteg -> shtegu)</li>
+                                            <li>Ending in '-ë': often <strong>'-u'</strong> (e.g., djalë -> djali)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Feminine Nouns:</strong>
+                                        <ul>
+                                            <li>Ending in '-ë': usually <strong>'-a'</strong> (e.g., shtëpi -> shtëpia, bukë -> buka)</li>
+                                            <li>Ending in other vowels: usually <strong>'-a'</strong> (e.g., tavolinë -> tavolina)</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                                <p class="mt-2">This is a simplified overview, as there are exceptions and more complex rules, but these are the most common patterns for a beginner.</p>
+                            </div>
+                        </div>
+                         <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Plural Forms of Nouns</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Forming plurals in Albanian can be complex, with various rules depending on gender and ending. Here are some common patterns for indefinite plurals:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>Masculine Nouns:</strong>
+                                        <ul>
+                                            <li>Many add <strong>'-a'</strong> (e.g., libër -> libra - books, mal -> male - mountains)</li>
+                                            <li>Some add <strong>'-inj'</strong> (e.g., qytet -> qytetinj - cities)</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Feminine Nouns:</strong>
+                                        <ul>
+                                            <li>Many change '-ë' to <strong>'-a'</strong> (e.g., shtëpi -> shtëpia - houses, gotë -> gota - glasses)</li>
+                                            <li>Some take <strong>'-ra'</strong> (e.g., dorë -> dora - hands)</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                                <p class="mt-2">Definite plurals add another suffix on top of the indefinite plural form (e.g., libra -> librat - the books, shtëpia -> shtëpitë - the houses). Focus on recognizing the patterns and building your vocabulary with both singular and plural forms.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Example Sentences -->
+            <div id="week2-examples-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Example Sentences - Describing Your World</h1>
+                <p class="text-lg text-gray-600 mb-6">These sentences demonstrate how to use nouns with definite and indefinite articles, along with basic descriptions, to talk about objects and family members.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Using Nouns with Articles</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë lexoj një libër. (I read a book.)</li>
+                            <li>Libri asht i vjetër. (The book is old.)</li>
+                            <li>Ajo ka një shtëpi të madhe. (She has a big house.)</li>
+                            <li>Shtëpia asht e bukur. (The house is beautiful.)</li>
+                            <li>Kjo asht një tavolinë. (This is a table.)</li>
+                            <li>Tavolina asht e pastër. (The table is clean.)</li>
+                            <li>Kemi një kerr të ri. (We have a new car.)</li>
+                            <li>Kerri asht i shpejtë. (The car is fast.)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Talking About Family</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Kjo asht nana ime. (This is my mother.)</li>
+                            <li>Ai asht babi jem. (That is my father.)</li>
+                            <li>Unë kam dy motra. (I have two sisters.)</li>
+                            <li>Ajo ka një vëlla të vogël. (She has a little brother.)</li>
+                            <li>Na jemi familje e madhe. (We are a big family.)</li>
+                            <li>Ata janë djemtë e saj. (They are her sons.)</li>
+                            <li>Kjo vajzë asht bija ime. (This girl is my daughter.)</li>
+                            <li>Ai djalë asht djali im. (That boy is my son.)</li>
+                            <li>Kjo asht halla ime. (This is my paternal aunt.)</li>
+                            <li>Ai asht daja im. (That is my maternal uncle.)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Pronunciation Focus -->
+            <div id="week2-pronunciation-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Pronunciation Focus - Noun Endings</h1>
+                <p class="text-lg text-gray-600 mb-6">Mastering the subtle pronunciation of noun endings, especially for definite and plural forms, is key for clarity. This section provides tips.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Focus Sounds for Week 2</h2>
+                        <ul class="list-disc list-inside space-y-3 text-gray-700">
+                            <li><strong>-i (Masculine Definite):</strong> The 'i' at the end of masculine definite nouns is typically pronounced clearly, like the 'ee' in 'see'. (e.g., 'libri' - the book).</li>
+                            <li><strong>-u (Masculine Definite):</strong> The 'u' in words like 'parku' (the park) is a pure 'oo' sound, as in 'moon'.</li>
+                            <li><strong>-a (Feminine Definite):</strong> The 'a' at the end of feminine definite nouns is a clear 'ah' sound, as in 'father'. (e.g., 'shtëpia' - the house).</li>
+                            <li><strong>Plural Endings:</strong> Pay attention to the subtle differences in plural endings.
+                                <ul>
+                                    <li>Masculine '-a' (e.g., 'libra'): The 'a' is again a clear 'ah' sound.</li>
+                                    <li>Feminine '-të' (e.g., 'shtëpitë'): The 'ë' here is pronounced, and the 't' is a soft dental 't'.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Double Consonants (e.g., -ll):</strong> Words like 'yll' (star) have 'll' which is a "dark l" (like the 'l' in 'ball'). Ensure you differentiate this from the regular 'l' (like in 'lis' - oak), which is a "light l" (tip of tongue on upper teeth).</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Tips for Pronouncing Noun Forms</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong>Exaggerate at First:</strong> When practicing new endings, exaggerate the sound slightly until it feels natural.</li>
+                            <li><strong>Listen to Full Sentences:</strong> Context matters. Listen to how these endings sound when part of a flowing sentence.</li>
+                            <li><strong>Minimal Pairs Practice:</strong> If you struggle with similar endings, find minimal pairs (e.g., singular vs. plural definite) and practice them side-by-side.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 2 Content - Cultural Insights -->
+            <div id="week2-cultural-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 2: Cultural Insights - The Family Unit</h1>
+                <p class="text-lg text-gray-600 mb-6">Family plays an exceptionally significant role in Albanian culture. Understanding its structure and importance will help you grasp nuances in conversation and social interactions.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Extended Family Bonds</h2>
+                        <p class="text-gray-700">In Albanian culture, the concept of family extends far beyond the nuclear unit. Grandparents, aunts, uncles, and cousins often maintain very close relationships, frequently living nearby or even together. Family gatherings are common and important events, celebrating everything from holidays to personal milestones. It's common for Albanians to introduce their relatives and inquire about yours, as it's a way to build rapport and trust.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Hospitality (Besa)</h2>
+                        <p class="text-gray-700">The concept of 'Besa' (pledge of honor, trust, faith) is deeply ingrained in Albanian tradition, and it's particularly evident in hospitality. Guests are highly honored, and Albanians will go to great lengths to ensure their comfort. If invited to an Albanian home, expect generous food and drink offerings, often more than you can consume! Refusing too firmly might be seen as impolite, so a polite decline after a small taste is usually appreciated.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Traditional Gender Roles (Evolving)</h2>
+                        <p class="text-gray-700">Historically, traditional gender roles were quite defined, with men often being the public face of the family and women managing the household. While modern Albanian society, especially in urban areas, is seeing these roles evolve rapidly, some traditional expectations may still be present, particularly in rural regions. Being aware of these historical contexts can provide insight into certain social dynamics, though it's important to approach individuals without preconceived notions.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Overview -->
+            <div id="week3-overview-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Daily Actions & Routines</h1>
+                <p class="text-lg text-gray-600 mb-6">This week builds on your foundational verbs by introducing how to talk about everyday actions and routines. You'll learn to conjugate regular verbs in the present tense and use adverbs to describe how often things happen.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 md:col-span-3 text-center">
+                        <img src="https://placehold.co/400x200/eaddd7/3f3c3a?text=Daily+Routine" alt="Illustration of daily activities like reading, eating, working" class="w-full h-auto rounded-lg mb-4 object-cover">
+                        <p class="text-gray-600 italic">Exploring common actions and routines in Albanian.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2 lg:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Goals for this Week</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Conjugate common regular verbs in the present tense (e.g., to read, to work, to eat).</li>
+                            <li>Describe your daily activities and routines using simple sentences.</li>
+                            <li>Correctly use adverbs of frequency (often, usually, rarely, never, always) to specify habits.</li>
+                            <li>Expand vocabulary related to daily actions, mealtimes, and time expressions.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Weekly Focus</h2>
+                        <div class="chart-container w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto h-64 sm:h-72 md:h-80 lg:h-96">
+                           <canvas id="week3Chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Key Takeaways & Highlights</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Many regular verbs follow predictable patterns (e.g., -oj verbs).</li>
+                            <li>Adverbs of frequency usually come *after* the verb.</li>
+                            <li>Time expressions like "në mëngjes" (in the morning) are key for describing routines.</li>
+                            <li>You can now start building simple sentences about your daily life!</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Brief Cultural Spotlight: Meal Times</h2>
+                        <p class="text-gray-700">Meals are often a significant family or social event in Albania. Breakfast (mëngjes) might be lighter, while lunch (dreka) is often the largest meal of the day, especially in more traditional settings. Dinner (darka) is typically eaten later in the evening, and it's common for families to gather for it.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Why This Week Matters</h2>
+                        <p class="text-gray-700">This week empowers you to talk about what you do, when you do it, and how often. This is incredibly practical for everyday conversations, allowing you to share information about your routine and understand others' habits. It moves you beyond simple descriptions to expressing actions!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Exercises -->
+            <div id="week3-exercises-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Exercises - Daily Actions Practice</h1>
+                <p class="text-lg text-gray-600 mb-6">Test your knowledge of regular verb conjugations and adverbs of frequency with these exercises for Week 3.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Conjugate Regular Verbs</h2>
+                        <p class="mb-4 text-gray-600">Complete the sentences with the correct present tense form of the verb provided in brackets. Check your answers below.</p>
+                        <div class="space-y-3" data-practice-type="regular-verb-conjugation">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Unë [lexoj]</span>
+                                <input type="text" data-answer="lexoj" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Ti [punoj]</span>
+                                <input type="text" data-answer="punon" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Ai/Ajo [ha]</span>
+                                <input type="text" data-answer="ha" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Na [pi]</span>
+                                <input type="text" data-answer="pijmë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Ju [shikoj]</span>
+                                <input type="text" data-answer="shikoni" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-24">Ata/Ato [fle]</span>
+                                <input type="text" data-answer="flenë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Regular verbs often follow patterns like -oj, -on, -on, -ojmë, -oni, -ojnë or have stem changes.</div>
+                           <div class="full-conjugation hidden mt-2 p-2 bg-stone-100 rounded-md">
+                                <p class="font-bold">Example Conjugation: Lexoj (to read)</p>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Unë lexoj</li>
+                                    <li>Ti lexon</li>
+                                    <li>Ai/Ajo lexon</li>
+                                    <li>Na lexojmë</li>
+                                    <li>Ju lexoni</li>
+                                    <li>Ata/Ato lexojnë</li>
+                                </ul>
+                           </div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                            <button class="toggle-conjugation-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Example Conjugation</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Adverbs of Frequency</h2>
+                        <p class="mb-4 text-gray-600">Choose the best adverb of frequency for each sentence.</p>
+                        <div class="space-y-3" data-practice-type="adverb-frequency">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Unë [always] shkoj në punë me kerr.</span>
+                                <input type="text" data-answer="gjithmonë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ajo [usually] ha mëngjes.</span>
+                                <input type="text" data-answer="zakonisht" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ne [rarely] shikojmë televizor.</span>
+                                <input type="text" data-answer="rrallë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ata [never] flenë vonë.</span>
+                                <input type="text" data-answer="kurrë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Consider the degree of regularity implied by the English word.</div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Vocabulary Flashcards: Daily Actions</h2>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="week3-vocab">
+                            <!-- Flashcards will be injected here by JS -->
+                        </div>
+                        <p class="text-center text-sm text-gray-500 mt-4">Click a card to flip it!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Theory Deep Dive -->
+            <div id="week3-theory-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Theory Deep Dive - Regular Verbs & Routines</h1>
+                <p class="text-lg text-gray-600 mb-6">Dive into the structure of present tense regular verbs and learn how to use adverbs and time expressions to talk about your daily routines.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Core Grammar Concepts</h2>
+                        <div class="accordion accordion-nested">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Present Tense (Regular Verbs)</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Many regular verbs in Albanian follow predictable patterns in the present tense. While there are some variations, a common pattern for verbs ending in -oj (like 'punoj' - to work) is:</p>
+                                <table class="min-w-full divide-y divide-gray-200 mt-2">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pronoun</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lexoj (to read)</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punoj (to work)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr><td class="px-3 py-2">Unë</td><td>lexoj</td><td>punoj</td></tr>
+                                        <tr><td class="px-3 py-2">Ti</td><td>lexon</td><td>punon</td></tr>
+                                        <tr><td class="px-3 py-2">Ai/Ajo</td><td>lexon</td><td>punon</td></tr>
+                                        <tr><td class="px-3 py-2">Na</td><td>lexojmë</td><td>punojmë</td></tr>
+                                        <tr><td class="px-3 py-2">Ju</td><td>lexoni</td><td>punoni</td></tr>
+                                        <tr><td class="px-3 py-2">Ata/Ato</td><td>lexojnë</td><td>punojnë</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="mt-2">Other verbs, like 'ha' (to eat) and 'pi' (to drink), have slightly different but consistent patterns. Always try to learn the full conjugation when you encounter a new verb!</p>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Adverbs of Frequency</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Adverbs of frequency tell us how often an action happens. They typically come *after* the verb in Albanian sentences, or at the beginning for emphasis.</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>Gjithmonë</strong> (always) - Unë fle gjithmonë herët. (I always sleep early.)</li>
+                                    <li><strong>Zakonisht</strong> (usually) - Ajo punon zakonisht në mbrëmje. (She usually works in the evening.)</li>
+                                    <li><strong>Shpesh</strong> (often) - Ne shpesh lexojmë libra. (We often read books.)</li>
+                                    <li><strong>Kaniherë</strong> (sometimes) - Ti kaniherë shkon në park. (You sometimes go to the park.)</li>
+                                    <li><strong>Rrallë</strong> (rarely) - Ata rrallë hanë mish. (They rarely eat meat.)</li>
+                                    <li><strong>Kurrë</strong> (never) - Ju kurrë nuk pini kafe. (You never drink coffee.) - <em>Note: 'nuk' is still used for negation with 'kurrë'.</em></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Common Time Expressions</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>These phrases help you specify when actions occur throughout the day or week:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>në mëngjes</strong> (in the morning)</li>
+                                    <li><strong>në pasdite</strong> (in the afternoon)</li>
+                                    <li><strong>në mbrëmje</strong> (in the evening)</li>
+                                    <li><strong>në vikend</strong> (on the weekend)</li>
+                                    <li><strong>çdo ditë</strong> (every day)</li>
+                                    <li><strong>çdo javë</strong> (every week)</li>
+                                    <li><strong>çdo natë</strong> (every night)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Example Sentences -->
+            <div id="week3-examples-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Example Sentences - Talking About Your Day</h1>
+                <p class="text-lg text-gray-600 mb-6">Explore practical sentences that combine regular verbs, adverbs of frequency, and time expressions to describe daily actions and routines.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Daily Actions</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë lexoj gazetën çdo mëngjes. (I read the newspaper every morning.)</li>
+                            <li>Ti punon në zyrë në pasdite. (You work in the office in the afternoon.)</li>
+                            <li>Ai ha bukë dhe djathë për mëngjes. (He eats bread and cheese for breakfast.)</li>
+                            <li>Ajo pi kafe në mbrëmje. (She drinks coffee in the evening.)</li>
+                            <li>Na flejmë nëntë orë çdo natë. (We sleep nine hours every night.)</li>
+                            <li>Ju shkoni në pazar në vikend. (You go to the market on the weekend.)</li>
+                            <li>Ata shikojnë televizor çdo ditë. (They watch TV every day.)</li>
+                            <li>Unë gatoj darkën shpesh. (I often cook dinner.)</li>
+                            <li>Kaniherë bëj sport. (Sometimes I do sports.)</li>
+                            <li>Ne gjithmonë kemi mëngjes bashkë. (We always have breakfast together.)</li>
+                            <li>Ajo vij çdo ditë në shpi. (She comes home every day.)</li>
+                            <li>Unë nuk shkruaj letra. (I don't write letters.)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Expressing Frequency</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Zakonisht, unë flej herët. (Usually, I sleep early.)</li>
+                            <li>Shpesh, ajo lexon para gjumit. (Often, she reads before sleep.)</li>
+                            <li>Rrallë, ata udhëtojnë. (Rarely, they travel.)</li>
+                            <li>Kurrë nuk pi alkool. (I never drink alcohol.)</li>
+                            <li>A jeni gjithmonë në punë? (Are you always at work?)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Pronunciation Focus -->
+            <div id="week3-pronunciation-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Pronunciation Focus - Verb Endings & Digraphs</h1>
+                <p class="text-lg text-gray-600 mb-6">This week introduces new verb conjugations and adverbs, bringing more diverse sounds. Focus on accurately pronouncing verb endings and specific Albanian digraphs.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Focus Sounds & Endings for Week 3</h2>
+                        <ul class="list-disc list-inside space-y-3 text-gray-700">
+                            <li><strong>-oj verbs:</strong> (e.g., lexoj, punoj, shikoj). Pay attention to the 'oy' sound in the 'Unë' form, and the 'on' sound for 'Ti'/'Ai/Ajo'. The 'jmë' in 'Na' (lexojmë) is a soft 'yem' sound.</li>
+                            <li><strong>-imë / -ijmë:</strong> For verbs like 'pi' (to drink), the 'Na' form is 'pijmë'. Ensure the 'i' and 'j' blend smoothly into a 'yee' sound before 'më'.</li>
+                            <li><strong>Digraphs: 'Sh', 'Xh', 'Zh':</strong>
+                                <ul>
+                                    <li><strong>Sh:</strong> Like 'sh' in 'ship' (e.g., 'shikoj' - to watch/look).</li>
+                                    <li><strong>Xh:</strong> Like 'j' in 'jam' or 'judge' (e.g., 'xhaketë' - jacket, though not in this week's vocab, it's a good example).</li>
+                                    <li><strong>Zh:</strong> Like 's' in 'measure' or 'vision' (e.g., 'zhurë' - noise, again not in vocab but good for sound).</li>
+                                </ul>
+                            </li>
+                            <li><strong>Adverbs of Frequency:</strong> Practice pronouncing words like 'gjithmonë' (ghee-th-moh-nuh), 'zakonisht' (zah-koh-nish-t), 'rrallë' (rrah-lluh). The 'll' is the hard 'l' from Week 2.</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Tips for Pronouncing Actions</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong>Focus on Rhythm:</strong> When listing daily activities, try to maintain a natural, flowing rhythm, connecting words smoothly.</li>
+                            <li><strong>Practice Short Phrases:</strong> Instead of just individual words, practice full short phrases like "Unë punoj çdo ditë" (I work every day) or "Ajo ha mëngjes në mëngjes" (She eats breakfast in the morning).</li>
+                            <li><strong>Listen to Narratives:</strong> Seek out simple Albanian narratives or dialogues about daily routines to hear these verbs and adverbs in continuous speech.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 3 Content - Cultural Insights -->
+            <div id="week3-cultural-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 3: Cultural Insights - Daily Life & Leisure</h1>
+                <p class="text-lg text-gray-600 mb-6">Understanding daily life in Albania offers insights into routines, social interactions, and common pastimes beyond just words and grammar.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">The Coffee Culture</h2>
+                        <p class="text-gray-700">Coffee is more than just a drink in Albania; it's a social ritual. Albanians love to spend time in cafes, whether for a quick morning coffee or a leisurely afternoon chat with friends. It's a common way to socialize, discuss business, or simply relax. Don't be surprised if an invitation to coffee turns into a longer, engaging conversation.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Walking and Socializing</h2>
+                        <p class="text-gray-700">Taking evening strolls (xhiro) is a popular pastime, especially in towns and cities. People of all ages participate, walking along main boulevards or through parks. It's a time for families to be together, friends to meet, and to see and be seen. This relaxed social activity is a staple of Albanian daily life, particularly in warmer months.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Importance of Fresh Food & Home Cooking</h2>
+                        <p class="text-gray-700">Home cooking with fresh, seasonal ingredients is highly valued. Many Albanians regularly visit local markets (pazare) to buy fresh produce, meat, and dairy. While restaurants are popular, a home-cooked meal is often considered superior and a true expression of hospitality. Sharing meals is a significant part of daily social life, reinforcing family and community bonds.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Week 4 Content - Overview -->
+            <div id="week4-overview-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Ongoing Actions - What's Happening Now?</h1>
+                <p class="text-lg text-gray-600 mb-6">This week is all about describing actions as they are happening! You'll learn the essential 'po' construction to talk about ongoing activities, how to use direct object pronouns, and add more detail with adverbs of manner.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 md:col-span-3 text-center">
+                        <img src="https://placehold.co/400x200/cc9b8d/ffffff?text=Action+Now" alt="Illustration of person engaged in an activity" class="w-full h-auto rounded-lg mb-4 object-cover">
+                        <p class="text-gray-600 italic">Describing what's happening in the moment.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Goals for this Week</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Form sentences using the present continuous tense (the 'po' construction).</li>
+                            <li>Correctly use direct object pronouns (e.g., 'e', 'i').</li>
+                            <li>Expand vocabulary for describing ongoing activities (e.g., seeing, hearing, waiting).</li>
+                            <li>Understand and apply common adverbs of manner (e.g., well, badly, quickly).</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Weekly Focus</h2>
+                        <div class="chart-container w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto h-64 sm:h-72 md:h-80 lg:h-96">
+                           <canvas id="week4Chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Key Takeaways & Highlights</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>The particle 'po' placed before a verb indicates an action happening right now (present continuous).</li>
+                            <li>Direct object pronouns (e.g., 'e', 'i', 'më') tell us who or what is receiving the action.</li>
+                            <li>These pronouns typically come before the verb, or between 'po' and the verb.</li>
+                            <li>Adverbs of manner describe *how* an action is performed, and usually follow the verb.</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Brief Cultural Spotlight: The Pace of Life</h2>
+                        <p class="text-gray-700">While Albanians can be very efficient, there's often a relaxed pace to daily interactions and social gatherings. The concept of "kafe" (coffee) as a social event rather than just a drink reflects this; it's an ongoing activity of conversation and connection. Don't be surprised if meetings start a little late or conversations flow leisurely, as personal connection is highly valued.</p>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Why This Week Matters</h2>
+                        <p class="text-gray-700">This week opens up a whole new level of conversational ability. You'll be able to ask and answer questions about immediate situations ("What are you doing?"), describe what you're seeing or hearing, and add detail to your actions. This is crucial for engaging in more dynamic and descriptive conversations.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 4 Content - Exercises -->
+            <div id="week4-exercises-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Exercises - Ongoing Actions Practice</h1>
+                <p class="text-lg text-gray-600 mb-6">Practice using the present continuous tense, direct object pronouns, and adverbs of manner with these interactive exercises.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Present Continuous (Po Construction)</h2>
+                        <p class="mb-4 text-gray-600">Form sentences using the 'po' construction with the given verbs. Remember the English translation means "I am [verb]-ing".</p>
+                        <div class="space-y-3" data-practice-type="po-construction">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Unë [shoh] (I am seeing)</span>
+                                <input type="text" data-answer="po shoh" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ti [dëgjoj] (You are listening)</span>
+                                <input type="text" data-answer="po dëgjon" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ajo [pres] (She is waiting)</span>
+                                <input type="text" data-answer="po pret" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Na [lexoj] (We are reading)</span>
+                                <input type="text" data-answer="po lexojmë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Place 'po' before the conjugated verb.</div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-2">
+                        <h2 class="text-xl font-bold mb-4">Practice: Direct Object Pronouns & Adverbs</h2>
+                        <p class="mb-4 text-gray-600">Fill in the correct direct object pronoun or adverb of manner.</p>
+                        <div class="space-y-3" data-practice-type="pronoun-adverb">
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Unë po [see it (masculine)] librin.</span>
+                                <input type="text" data-answer="e" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ajo po [listen to me].</span>
+                                <input type="text" data-answer="më dëgjon" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ai punon [well].</span>
+                                <input type="text" data-answer="mirë" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="flex items-center space-x-2">
+                                <span class="font-medium w-32">Ne po [wait for you (plural)].</span>
+                                <input type="text" data-answer="ju presim" class="practice-input w-full p-2 border border-gray-300 rounded-md">
+                           </div>
+                           <div class="hint-text hidden text-sm text-gray-500 italic mt-2">Pronouns typically come before the verb. Adverbs of manner usually come after.</div>
+                        </div>
+                        <div class="practice-controls mt-4">
+                            <button class="check-answers-btn bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors">Check Answers</button>
+                            <button class="show-hint-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Hint</button>
+                            <button class="show-answers-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300 transition-colors">Show Answers</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 md:col-span-3">
+                        <h2 class="text-xl font-bold mb-4">Vocabulary Flashcards: Ongoing Actions</h2>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="week4-vocab">
+                            <!-- Flashcards will be injected here by JS -->
+                        </div>
+                        <p class="text-center text-sm text-gray-500 mt-4">Click a card to flip it!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 4 Content - Theory Deep Dive -->
+            <div id="week4-theory-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Theory Deep Dive - Present Continuous & Pronouns</h1>
+                <p class="text-lg text-gray-600 mb-6">Understand the mechanics of describing actions in progress, including the versatile 'po' construction and the use of direct object pronouns.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Core Grammar Concepts</h2>
+                        <div class="accordion accordion-nested">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>The "Po" Construction (Present Continuous)</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>To express an action happening right now (equivalent to "am/is/are -ing" in English), Albanian uses the particle <strong>'po'</strong> placed directly before the conjugated verb in the simple present tense.</p>
+                                <p class="mt-2 font-bold">Structure: Subject + po + Verb (Present Tense Form)</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Unë <strong>po lexoj</strong>. (I am reading.)</li>
+                                    <li>Ti <strong>po punon</strong>. (You are working.)</li>
+                                    <li>Ai <strong>po ha</strong>. (He is eating.)</li>
+                                    <li>Na <strong>po pijmë</strong> kafe. (We are drinking coffee.)</li>
+                                </ul>
+                                <p class="mt-4 font-bold">Negation with "Po" Construction:</p>
+                                <p>To negate an action happening now, 'nuk' comes before 'po'.</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Unë <strong>nuk po lexoj</strong>. (I am not reading.)</li>
+                                    <li>Ajo <strong>nuk po fle</strong>. (She is not sleeping.)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Direct Object Pronouns</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Direct object pronouns replace nouns that receive the action of the verb. In Albanian, they typically come *before* the verb, or between 'po' and the verb in the continuous tense.</p>
+                                <p class="mt-2 font-bold">Common Direct Object Pronouns:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>më</strong> (me) - Ti më sheh. (You see me.) / Ti po më sheh. (You are seeing me.)</li>
+                                    <li><strong>të</strong> (you, singular informal) - Unë të shoh. (I see you.) / Unë po të shoh. (I am seeing you.)</li>
+                                    <li><strong>e</strong> (him/it, masculine singular; her/it, feminine singular) - E shoh librin. (I see the book - masculine). E shoh tavolinën. (I see the table - feminine).</li>
+                                    <li><strong>i</strong> (them, masculine plural) - I shoh burrat. (I see the men.)</li>
+                                    <li><strong>i</strong> (them, feminine plural) - I shoh gratë. (I see the women.)</li>
+                                    <li><strong>na</strong> (us) - Ai na njeh. (He knows us.)</li>
+                                    <li><strong>ju</strong> (you, plural/formal) - Ata ju presin. (They are waiting for you.)</li>
+                                </ul>
+                                <p class="mt-4"><strong>Placement with "Po":</strong> When using the 'po' construction, the direct object pronoun comes *between* 'po' and the verb.</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li>Unë po <strong>e</strong> lexoj librin. (I am reading the book.)</li>
+                                    <li>Ajo po <strong>të</strong> pret. (She is waiting for you.)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion accordion-nested mt-2">
+                            <h4 class="accordion-header font-medium cursor-pointer flex justify-between items-center p-3 rounded-t-lg border-b"><span>Adverbs of Manner</span> <span>&#9662;</span></h4>
+                            <div class="accordion-content p-3 rounded-b-lg">
+                                <p>Adverbs of manner describe *how* an action is performed. They generally come *after* the verb they modify.</p>
+                                <p class="mt-2 font-bold">Examples of Adverbs of Manner:</p>
+                                <ul class="list-disc list-inside text-sm mt-2">
+                                    <li><strong>mirë</strong> (well) - Ajo flet mirë. (She speaks well.)</li>
+                                    <li><strong>keq</strong> (badly) - Ai shkruan keq. (He writes badly.)</li>
+                                    <li><strong>shpejtë</strong> (fast/quickly) - Ne ecim shpejtë. (We walk fast.)</li>
+                                    <li><strong>ngadalë</strong> (slowly) - Ju po lexoni ngadalë. (You are reading slowly.)</li>
+                                    <li><strong>bukur</strong> (beautifully) - Ajo këndon bukur. (She sings beautifully.)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 4 Content - Example Sentences -->
+            <div id="week4-examples-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Example Sentences - What's Happening Now?</h1>
+                <p class="text-lg text-gray-600 mb-6">See how the 'po' construction, direct object pronouns, and adverbs of manner are used in practical sentences to describe ongoing actions.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Present Continuous (Po Construction)</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë po lexoj një libër. (I am reading a book.)</li>
+                            <li>Ti po dëgjon muzikë. (You are listening to music.)</li>
+                            <li>Ai po pret autobusin. (He is waiting for the bus.)</li>
+                            <li>Ajo po gatuan darkën. (She is cooking dinner.)</li>
+                            <li>Na po flasim shqip. (We are speaking Albanian.)</li>
+                            <li>Ju po shikoni televizor? (Are you watching TV?)</li>
+                            <li>Ata po shkruajnë letra. (They are writing letters.)</li>
+                            <li>Çka po bën? (What are you doing?)</li>
+                            <li>Ku po shkon? (Where are you going?)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">With Direct Object Pronouns</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Unë po e shoh. (I am seeing him/it/her.)</li>
+                            <li>Ajo po e pi kafen. (She is drinking the coffee.)</li>
+                            <li>Ti po më dëgjon? (Are you listening to me?)</li>
+                            <li>Na po të presim. (We are waiting for you.)</li>
+                            <li>Ata po i lexojnë librat. (They are reading the books.)</li>
+                            <li>Ju po na shikoni? (Are you looking at us?)</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">With Adverbs of Manner</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Ajo po flet mirë. (She is speaking well.)</li>
+                            <li>Ai po shkruan shpejtë. (He is writing fast.)</li>
+                            <li>Ne po ecim ngadalë. (We are walking slowly.)</li>
+                            <li>Ti po gatuan bukur. (You are cooking beautifully.)</li>
+                            <li>Ata po dëgjojnë me kujdes. (They are listening carefully.)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 4 Content - Pronunciation Focus -->
+            <div id="week4-pronunciation-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Pronunciation Focus - Smoothness & Connected Speech</h1>
+                <p class="text-lg text-gray-600 mb-6">This week introduces structures that require smooth transitions and attention to connected speech, especially with the 'po' construction and pronouns.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">Focus Sounds & Connected Speech for Week 4</h2>
+                        <ul class="list-disc list-inside space-y-3 text-gray-700">
+                            <li><strong>"Po" construction:</strong> When "po" is used, it should flow smoothly into the verb. Avoid a hard pause between them. Practice: "po lexoj" (po-lek-soj), "po ha" (po-ha).</li>
+                            <li><strong>Pronoun Placement:</strong> Direct object pronouns (më, të, e, i, na, ju) are unstressed and should blend with the words around them.
+                                <ul>
+                                    <li>"po e shoh" (po-e-shoh) - "e" blends with "po" and "shoh".</li>
+                                    <li>"po më dëgjon" (po-muh-duh-gjon) - "më" is a light sound.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Adverbs:</strong> Pronounce adverbs clearly, ensuring the final sounds are distinct. For instance, the 'ë' in 'shpejtë' or 'ngadalë' should be a soft schwa.</li>
+                            <li><strong>Verbs ending in 'j':</strong> Be mindful of the 'j' sound (like 'y' in 'yes') at the end of verb stems like 'dëgjoj', 'shkruaj' when followed by different endings.</li>
+                            <li><strong>Rolling 'Rr':</strong> Continue to practice the distinct rolled 'Rr' sound, especially in words like 'rrugë' (road), 'rrallë' (rarely).</li>
+                        </ul>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Tips for More Natural Pronunciation</h2>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li><strong>Shadowing:</strong> Listen to native Albanian speakers (e.g., in simple videos or audio lessons) and try to repeat exactly what they say, mimicking their rhythm, intonation, and connection of words.</li>
+                            <li><strong>Focus on Syllable Stress:</strong> While Albanian stress can be tricky, generally words are stressed on the second to last syllable. Pay attention to this for new vocabulary.</li>
+                            <li><strong>Record Yourself:</strong> Record yourself saying sentences from the example section and compare them to a native speaker's pronunciation. This helps you identify areas for improvement.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week 4 Content - Cultural Insights -->
+            <div id="week4-cultural-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Week 4: Cultural Insights - Social Rhythms & Hospitality</h1>
+                <p class="text-lg text-gray-600 mb-6">Understanding the social rhythms and deep-rooted hospitality in Albanian culture can enhance your communication and interactions.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6">
+                        <h2 class="text-xl font-bold mb-4">The Art of Conversation</h2>
+                        <p class="text-gray-700">Albanians generally enjoy conversation and social interaction. Questions like "Çka po bën?" (What are you doing?) or "Ku po shkon?" (Where are you going?) are common friendly inquiries, even if they sometimes feel direct to non-Albanians. They often serve as icebreakers and a way to show interest and connection. Be prepared for conversations to be lively and sometimes involve more than one person speaking at a time, especially among close friends.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Hospitality and Offering (The "Merr!" mentality)</h2>
+                        <p class="text-gray-700">Hospitality (mikpritja) is a cornerstone of Albanian culture, rooted in the ancient code of Besa. If you are a guest, expect to be offered food and drink repeatedly. It is polite to initially refuse once or twice (e.g., "Faleminderit, jo" - Thank you, no), but then to accept. Hosts often insist with phrases like "Merr!" (Take!), "Ha!" (Eat!), or "Pi!" (Drink!). It's a way for them to show care and generosity.</p>
+
+                        <h2 class="text-xl font-bold mb-4 mt-6">Public Life vs. Private Sphere</h2>
+                        <p class="text-gray-700">There's often a clear distinction between public and private life. While public spaces like cafes and promenades are vibrant and social, the home is a very private and sacred space, usually reserved for family and very close friends. Being invited into an Albanian home is a significant sign of trust and respect, indicating that you are considered part of their inner circle.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Other weeks will be dynamically populated or can be hardcoded similarly -->
+            <div id="week5-overview-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+            <div id="week5-exercises-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+            <div id="week5-theory-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+            <div id="week5-examples-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+            <div id="week5-pronunciation-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+            <div id="week5-cultural-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 5 Content Coming Soon</h1></div>
+
+            <div id="week6-overview-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+            <div id="week6-exercises-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+            <div id="week6-theory-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+            <div id="week6-examples-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+            <div id="week6-pronunciation-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+            <div id="week6-cultural-content" class="week-content hidden"><h1 class="text-3xl font-bold text-[#d57a66]">Week 6 Content Coming Soon</h1></div>
+
+
+            <!-- Alphabet Overview -->
+            <div id="alphabet-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Alphabet Overview: Mastering Albanian Sounds</h1>
+                <p class="text-lg text-gray-600 mb-6">The Albanian alphabet is primarily phonetic, but some letters have unique sounds that are crucial for correct pronunciation. This section provides a comprehensive guide.</p>
+                
+                <div class="card p-6 mb-6 text-center">
+                    <img src="https://placehold.co/400x200/cc9b8d/ffffff?text=Albanian+Alphabet" alt="Illustration of alphabet letters" class="w-full h-auto rounded-lg mb-4 object-cover">
+                    <p class="text-gray-600 italic">Understanding the building blocks of Albanian words.</p>
+                </div>
+
+                <div class="card p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4">Complete Albanian Alphabet</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Letter</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pronunciation (EN Equivalent)</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example Word</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr><td class="px-6 py-4">A a</td><td>Like 'a' in 'father'</td><td>ardhë (come)</td></tr>
+                                <tr><td class="px-6 py-4">B b</td><td>Like 'b' in 'bat'</td><td>bukë (bread)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">C c</td><td>Like 'ts' in 'cats' (as in 'nuts')</td><td>çelë (unlock)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Ç ç</td><td>Like 'ch' in 'chair'</td><td>çaj (tea)</td></tr>
+                                <tr><td class="px-6 py-4">D d</td><td>Like 'd' in 'dog'</td><td>ditë (day)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Dh dh</td><td>Like 'th' in 'this' (voiced 'th')</td><td>dhuratë (gift)</td></tr>
+                                <tr><td class="px-6 py-4">E e</td><td>Like 'e' in 'met'</td><td>erë (wind)</td></tr>
+                                <tr><td class="px-6 py-4">Ë ë</td><td>Like 'a' in 'about' (schwa sound, often silent at end of words)</td><td>këngë (song)</td></tr>
+                                <tr><td class="px-6 py-4">F f</td><td>Like 'f' in 'fun'</td><td>fshat (village)</td></tr>
+                                <tr><td class="px-6 py-4">G g</td><td>Like 'g' in 'go'</td><td>gomë (eraser)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Gj gj</td><td>Like 'j' in 'just' or 'd' in 'dune' (palatalized)</td><td>gjuhë (language)</td></tr>
+                                <tr><td class="px-6 py-4">H h</td><td>Like 'h' in 'hat'</td><td>hekur (iron)</td></tr>
+                                <tr><td class="px-6 py-4">I i</td><td>Like 'ee' in 'see'</td><td>ishull (island)</td></tr>
+                                <tr><td class="px-6 py-4">J j</td><td>Like 'y' in 'yes'</td><td>ujë (water)</td></tr>
+                                <tr><td class="px-6 py-4">K k</td><td>Like 'k' in 'kite'</td><td>kohë (time)</td></tr>
+                                <tr><td class="px-6 py-4 font-bold text-[#d57a66]">L l</td><td>Like 'l' in 'love' (soft 'l', tip of tongue on upper teeth)</td><td>lis (oak)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Ll ll</td><td>Like 'll' in 'ball' (hard/dark 'l', back of tongue raised)</td><td>yll (star)</td></tr>
+                                <tr><td class="px-6 py-4">M m</td><td>Like 'm' in 'man'</td><td>mal (mountain)</td></tr>
+                                <tr><td class="px-6 py-4">N n</td><td>Like 'n' in 'no'</td><td>natë (night)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Nj nj</td><td>Like 'ny' in 'canyon' or 'ñ' in Spanish 'señor'</td><td>një (one)</td></tr>
+                                <tr><td class="px-6 py-4">O o</td><td>Like 'o' in 'go'</td><td>oqeani (ocean)</td></tr>
+                                <tr><td class="px-6 py-4">P p</td><td>Like 'p' in 'pen'</td><td>punë (work)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Q q</td><td>Like 'ch' in 'cheese' (palatalized, lighter than Ç)</td><td>qen (dog)</td></tr>
+                                <tr><td class="px-6 py-4">R r</td><td>Like 'r' in 'run' (tapped, light 'r')</td><td>rrugë (road)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Rr rr</td><td>Like a strong, rolled 'r' (as in Scottish 'r' or Spanish 'rr')</td><td>rrugë (road - different pronunciation)</td></tr>
+                                <tr><td class="px-6 py-4">S s</td><td>Like 's' in 'sit'</td><td>shpi (house)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Sh sh</td><td>Like 'sh' in 'ship'</td><td>shumë (many)</td></tr>
+                                <tr><td class="px-6 py-4">T t</td><td>Like 't' in 'top'</td><td>tavolinë (table)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Th th</td><td>Like 'th' in 'think' (unvoiced 'th')</td><td>thëllë (cold)</td></tr>
+                                <tr><td class="px-6 py-4">U u</td><td>Like 'oo' in 'moon'</td><td>ujë (water)</td></tr>
+                                <tr><td class="px-6 py-4">V v</td><td>Like 'v' in 'van'</td><td>vend (place)</td></tr>
+                                <tr><td class="px-6 py-4">X x</td><td>Like 'dz' in 'adze'</td><td>xham (glass)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Xh xh</td><td>Like 'j' in 'jam' (voiced 'j')</td><td>xhaketë (jacket)</td></tr>
+                                <tr><td class="px-6 py-4">Y y</td><td>Like 'u' in French 'tu' or German 'ü' (a high, rounded front vowel)</td><td>dy (two)</td></tr>
+                                <tr><td class="px-6 py-4">Z z</td><td>Like 'z' in 'zoo'</td><td>zemër (heart)</td></tr>
+                                <tr class="bg-stone-50"><td class="px-6 py-4 font-bold text-[#d57a66]">Zh zh</td><td>Like 's' in 'measure' (voiced 'sh')</td><td>zhurë (noise)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Phrase Generator -->
+            <div id="phrase-generator-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">✨ Albanian Phrase Generator ✨</h1>
+                <p class="text-lg text-gray-600 mb-6">This tool uses AI to help you generate common Kosovarian Albanian phrases based on a theme you provide. It's a great way to get practical examples for different situations and expand your vocabulary in context.</p>
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4">Generate New Phrases</h2>
+                    <p class="mb-4 text-gray-600">Enter a theme (e.g., "Greetings", "At the Market", "Family Introductions") and get some useful Albanian phrases with translations.</p>
+                    <textarea id="phrase-theme-input" rows="2" class="w-full p-3 border border-gray-300 rounded-md focus:ring-[#d57a66] focus:border-[#d57a66] mb-4" placeholder="e.g., Ordering food at a restaurant"></textarea>
+                    <button id="generate-phrase-btn" class="bg-[#d57a66] text-white font-bold py-2 px-4 rounded hover:bg-[#c96a55] transition-colors flex items-center">
+                        Generate Phrases
+                        <svg id="loading-spinner" class="animate-spin h-5 w-5 ml-2 text-white hidden" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                    <div id="generated-phrases" class="mt-6 space-y-4">
+                        <!-- Generated phrases will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vocabulary Overview -->
+            <div id="vocabulary-content" class="week-content hidden">
+                <h1 class="text-3xl font-bold text-[#d57a66] mb-2">Vocabulary Overview</h1>
+                <p class="text-lg text-gray-600 mb-6">Explore all the vocabulary learned across the weeks. You can search for specific words or sort the list alphabetically.</p>
+
+                <div class="card p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4">Search & Filter</h2>
+                    <input type="text" id="vocab-search-input" class="w-full p-3 border border-gray-300 rounded-md focus:ring-[#d57a66] focus:border-[#d57a66]" placeholder="Search Albanian or English words...">
+                    <div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                        <button id="sort-albanian-btn" class="bg-[#f4ece6] text-[#3f3c3a] font-bold py-2 px-4 rounded hover:bg-[#eaddd7] transition-colors">Sort by Albanian <span id="sort-albanian-icon">&#x2191;&#x2193;</span></button>
+                        <button id="sort-english-btn" class="bg-[#f4ece6] text-[#3f3c3a] font-bold py-2 px-4 rounded hover:bg-[#eaddd7] transition-colors">Sort by English <span id="sort-english-icon">&#x2191;&#x2193;</span></button>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4">Word List</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Albanian</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">English</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vocabulary-list" class="bg-white divide-y divide-gray-200">
+                                <!-- Vocab items will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="no-vocab-results" class="text-center text-gray-500 mt-4 hidden">No matching vocabulary found.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Data for the application
+            const vocabData = {
+                week1: [
+                    { albanian: "Përshëndetje", english: "Hello" },
+                    { albanian: "Mirëmëngjes", english: "Good morning" },
+                    { albanian: "Faleminderit", english: "Thank you" },
+                    { albanian: "S'ka përse!", english: "You're welcome!" },
+                    { albanian: "Qysh e ki emrin?", english: "What's your name?" },
+                    { albanian: "Prej nga je?", english: "Where are you from?" },
+                    { albanian: "i/e lodhur", english: "tired" },
+                    { albanian: "në shpi", english: "at home" },
+                    { albanian: "Po", english: "Yes" }, 
+                    { albanian: "Jo", english: "No" }, 
+                    { albanian: "Si je?", english: "How are you? (informal)" },
+                    { albanian: "Mirë", english: "Good" },
+                    { albanian: "Emri jem asht...", english: "My name is..." },
+                    { albanian: "Qysh e ki emrin?", english: "What's your name?" },
+                ],
+                week2: [
+                    { albanian: "libër", english: "book" },
+                    { albanian: "shtëpi", english: "house" },
+                    { albanian: "tavolinë", english: "table" },
+                    { albanian: "telefon", english: "phone" },
+                    { albanian: "kerr", english: "car" },
+                    { albanian: "park", english: "park" },
+                    { albanian: "baba", english: "father" },
+                    { albanian: "nanë", english: "mother" },
+                    { albanian: "motra", english: "sister" },
+                    { albanian: "djalë", english: "boy/son" },
+                    { albanian: "vajzë", english: "girl/daughter" },
+                    { albanian: "hallë", english: "aunt (father's sister)" },
+                    { albanian: "tezë", english: "aunt (mother's sister)" },
+                    { albanian: "dajë", english: "uncle (mother's brother)" }
+                ],
+                week3: [
+                    { albanian: "lexoj", english: "to read" },
+                    { albanian: "shkruaj", english: "to write" },
+                    { albanian: "punoj", english: "to work" },
+                    { albanian: "ha", english: "to eat" },
+                    { albanian: "pi", english: "to drink" },
+                    { albanian: "fle", english: "to sleep" },
+                    { albanian: "shkoj", english: "to go" },
+                    { albanian: "vij", english: "to come" },
+                    { albanian: "shikoj", english: "to watch/look" },
+                    { albanian: "gatuaj", english: "to cook" },
+                    { albanian: "bëj", english: "to do/make" },
+                    { albanian: "gjithmonë", english: "always" },
+                    { albanian: "zakonisht", english: "usually" },
+                    { albanian: "shpesh", english: "often" },
+                    { albanian: "kaniherë", english: "sometimes" },
+                    { albanian: "rrallë", english: "rarely" },
+                    { albanian: "kurrë", english: "never" },
+                    { albanian: "në mëngjes", english: "in the morning" },
+                    { albanian: "në pasdite", english: "in the afternoon" },
+                    { albanian: "në mbrëmje", english: "in the evening" },
+                    { albanian: "në vikend", english: "on the weekend" },
+                    { albanian: "çdo ditë", english: "every day" },
+                    { albanian: "mëngjes", english: "breakfast" },
+                    { albanian: "dreka", english: "lunch" },
+                    { albanian: "darka", english: "dinner" },
+                ],
+                week4: [
+                    { albanian: "shoh", english: "to see" },
+                    { albanian: "dëgjoj", english: "to hear/listen" },
+                    { albanian: "pres", english: "to wait/expect" },
+                    { albanian: "televizor", english: "television" },
+                    { albanian: "radio", english: "radio" },
+                    { albanian: "lajme", english: "news" },
+                    { albanian: "letër", english: "letter" },
+                    { albanian: "email", english: "email" },
+                    { albanian: "mirë", english: "well" },
+                    { albanian: "keq", english: "badly" },
+                    { albanian: "shpejtë", english: "fast/quickly" },
+                    { albanian: "ngadalë", english: "slowly" },
+                    { albanian: "kujdes", english: "carefully" },
+                    { albanian: "flas", english: "to speak" }
+                ]
+            };
+
+            // Consolidate all vocab data for the overview tab
+            const allVocabData = [];
+            for (const weekKey in vocabData) {
+                if (vocabData.hasOwnProperty(weekKey)) {
+                    allVocabData.push(...vocabData[weekKey]);
+                }
+            }
+
+            // Remove duplicate vocabulary items
+            const uniqueVocab = [];
+            const seen = new Set();
+            for (const item of allVocabData) {
+                const key = `${item.albanian}|${item.english}`;
+                if (!seen.has(key)) {
+                    uniqueVocab.push(item);
+                    seen.add(key);
+                }
+            }
+            allVocabData.length = 0; 
+            allVocabData.push(...uniqueVocab); 
+
+
+            let currentSortKey = 'albanian'; 
+            let sortDirection = 1; 
+
+            const chartData = {
+                week1: {
+                    labels: ['Pronunciation & Grammar', 'Vocabulary', 'Conjugation Practice', 'Dialogue Practice'],
+                    data: [35, 25, 20, 20], 
+                },
+                week2: {
+                    labels: ['Nouns & Gender', 'Definite/Indefinite', 'Plurals', 'Vocabulary'],
+                    data: [30, 25, 20, 25],
+                },
+                week3: {
+                    labels: ['Regular Verbs', 'Adverbs of Frequency', 'Daily Vocab', 'Practice Exercises'],
+                    data: [30, 20, 25, 25],
+                },
+                week4: {
+                    labels: ['Present Continuous', 'Direct Object Pronouns', 'Adverbs of Manner', 'Vocabulary & Exercises'],
+                    data: [35, 25, 20, 20],
+                }
+            };
+
+            // --- Navigation Logic ---
+            const navLinks = document.querySelectorAll('#nav-menu .nav-link');
+            const sidebarParentToggles = document.querySelectorAll('.sidebar-parent-toggle');
+            const weekContents = document.querySelectorAll('.week-content');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const sidebar = document.getElementById('sidebar');
+
+            // Function to close all submenus except the active one
+            function closeAllSubmenus(exceptSubmenu = null) {
+                document.querySelectorAll('.sidebar-submenu').forEach(submenu => {
+                    if (submenu !== exceptSubmenu) {
+                        submenu.style.maxHeight = null;
+                        submenu.previousElementSibling.classList.remove('active');
+                    }
+                });
+            }
+
+            function updateContent(hash) {
+                // Ensure a default hash if none is provided
+                if (!hash || hash === '#') {
+                    hash = '#week1-overview'; // Default to Week 1 Overview
+                }
+                
+                // Hide all content sections initially
+                weekContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // Remove active class from all nav links and parent toggles
+                navLinks.forEach(link => link.classList.remove('active'));
+                sidebarParentToggles.forEach(toggle => toggle.classList.remove('active'));
+                
+                // Determine the current parent week hash
+                const currentWeekIdMatch = hash.match(/#week(\d+)/);
+                let currentWeekParentHash = null;
+                if (currentWeekIdMatch) {
+                    currentWeekParentHash = `#week${currentWeekIdMatch[1]}-overview`;
+                }
+
+                // Show the target content section
+                const targetContentId = hash.replace('#', '') + '-content';
+                const targetContent = document.getElementById(targetContentId);
+                if (targetContent) {
+                    targetContent.classList.remove('hidden');
+
+                    // Activate the specific sub-link
+                    const activeNavLink = document.querySelector(`.nav-link[href="${hash}"]`);
+                    if (activeNavLink) {
+                        activeNavLink.classList.add('active');
+                        // Ensure its parent submenu is open and parent toggle is active
+                        const parentSubmenu = activeNavLink.closest('.sidebar-submenu');
+                        if (parentSubmenu) {
+                            parentSubmenu.style.maxHeight = parentSubmenu.scrollHeight + 'px';
+                            parentSubmenu.previousElementSibling.classList.add('active'); // Activate the parent toggle
+                            closeAllSubmenus(parentSubmenu); // Close others
+                        }
+                    }
+
+                    // Re-initialize dynamic content for the active week/sub-page
+                    const weekNumber = hash.match(/week(\d+)/)?.[1];
+                    if (weekNumber) {
+                        const weekPrefix = `week${weekNumber}`;
+                        // Flashcards are now only in the Exercises section
+                        if (hash.includes('exercises')) {
+                            initFlashcards(weekPrefix, `${weekPrefix}-vocab`);
+                        }
+                        // Charts are only on the overview page
+                        if (hash.includes('overview')) {
+                            initChartsForWeek(weekPrefix);
+                        }
+                        // Accordions are only in the Theory Deep Dive section
+                        if (hash.includes('theory')) {
+                            initAccordions(targetContent); // Pass the content element to limit scope
+                        } else {
+                            // Close any open accordions if navigating away from theory
+                            document.querySelectorAll('.accordion-nested .accordion-content').forEach(acc => {
+                                acc.style.maxHeight = null;
+                                acc.previousElementSibling.querySelector('span:last-child').innerHTML = '&#9662;';
+                            });
+                        }
+                        // Re-init quizzes for the exercises page
+                        if (hash.includes('exercises')) {
+                            initPracticeQuizzes(targetContent); // Pass the content element
+                        }
+                    }
+                } else {
+                    console.warn(`Content section for hash ${hash} not found. Defaulting.`);
+                    updateContent('#week1-overview'); // Fallback to Week 1 Overview
+                    return; // Prevent further execution for invalid hash
+                }
+
+                sidebar.classList.remove('open'); // Close mobile menu after navigation
+            }
+
+            // Event listeners for sidebar parent toggles (to expand/collapse submenus)
+            sidebarParentToggles.forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const submenu = this.nextElementSibling;
+                    const isOpen = submenu.style.maxHeight && submenu.style.maxHeight !== '0px';
+
+                    closeAllSubmenus(isOpen ? null : submenu); // Close others unless this one is already open
+
+                    if (isOpen) {
+                        submenu.style.maxHeight = null;
+                        this.classList.remove('active');
+                    } else {
+                        submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                        this.classList.add('active');
+                    }
+                    
+                    // If clicking a parent toggle, also navigate to its overview page
+                    const targetHash = this.getAttribute('href');
+                    if (targetHash && window.location.hash !== targetHash) { // Fix: use window.location.hash
+                         history.pushState(null, null, targetHash);
+                         updateContent(targetHash);
+                    }
+                });
+            });
+
+            // Event listeners for individual nav links (sub-links)
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetHash = this.getAttribute('href');
+                    history.pushState(null, null, targetHash);
+                    updateContent(targetHash);
+                });
+            });
+
+            // Handle browser back/forward buttons
+            window.addEventListener('popstate', () => {
+                updateContent(window.location.hash);
+            });
+            
+            // Mobile menu button toggle
+            mobileMenuButton.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+
+            // --- Component Initialization Functions (adapted for specific content sections) ---
+            function initFlashcards(week, containerId) {
+                const container = document.getElementById(containerId);
+                if (!container || !vocabData[week]) return;
+                
+                container.innerHTML = ''; // Clear previous flashcards
+                vocabData[week].forEach(item => {
+                    const cardHtml = `
+                        <div class="flashcard-container h-32">
+                            <div class="flashcard">
+                                <div class="flashcard-front">
+                                    <p class="text-xl font-semibold">${item.albanian}</p>
+                                </div>
+                                <div class="flashcard-back">
+                                    <p class="text-lg">${item.english}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += cardHtml;
+                });
+
+                document.querySelectorAll(`#${containerId} .flashcard`).forEach(card => {
+                    card.addEventListener('click', () => {
+                        card.classList.toggle('flipped');
+                    });
+                });
+            }
+
+            function initAccordions(scopeElement = document) {
+                // Select only nested accordions within the given scope
+                scopeElement.querySelectorAll('.accordion-nested > .accordion-header').forEach(header => {
+                    header.onclick = null; // Remove previous listeners
+                    header.addEventListener('click', () => {
+                        const content = header.nextElementSibling;
+                        if (content.style.maxHeight) {
+                            content.style.maxHeight = null;
+                            header.querySelector('span:last-child').innerHTML = '&#9662;'; // Down arrow
+                        } else {
+                            // Close other open nested accordions within the same main accordion content
+                            header.closest('.card').querySelectorAll('.accordion-nested > .accordion-content').forEach(siblingContent => {
+                                if (siblingContent !== content && siblingContent.style.maxHeight) {
+                                    siblingContent.style.maxHeight = null;
+                                    siblingContent.previousElementSibling.querySelector('span:last-child').innerHTML = '&#9662;';
+                                }
+                            });
+
+                            content.style.maxHeight = content.scrollHeight + "px";
+                            header.querySelector('span:last-child').innerHTML = '&#9652;'; // Up arrow
+                        }
+                    });
+                });
+            }
+
+            function initPracticeQuizzes(scopeElement = document) {
+                // Select practice controls only within the given scope
+                scopeElement.querySelectorAll('.practice-controls').forEach(controlsDiv => {
+                    const checkBtn = controlsDiv.querySelector('.check-answers-btn');
+                    const showHintBtn = controlsDiv.querySelector('.show-hint-btn');
+                    const showAnswersBtn = controlsDiv.querySelector('.show-answers-btn');
+                    const toggleConjugationBtn = controlsDiv.querySelector('.toggle-conjugation-btn'); 
+                    
+                    const practiceSection = controlsDiv.previousElementSibling; 
+                    const inputs = practiceSection.querySelectorAll('.practice-input');
+                    const hintText = practiceSection.querySelector('.hint-text');
+                    const fullConjugation = practiceSection.querySelector('.full-conjugation');
+
+                    // Reset state of inputs when re-initializing
+                    inputs.forEach(input => {
+                        input.classList.remove('border-green-500', 'border-red-500');
+                        input.classList.add('border-gray-300');
+                        input.disabled = false;
+                        input.value = ''; // Clear values when loading page fresh
+                    });
+                    if (hintText) hintText.classList.add('hidden');
+                    if (fullConjugation) fullConjugation.classList.add('hidden');
+                    if (toggleConjugationBtn) toggleConjugationBtn.textContent = 'Show Full Conjugation';
+
+
+                    if (checkBtn) {
+                        checkBtn.onclick = () => {
+                            inputs.forEach(input => {
+                                const userAnswer = input.value.trim().toLowerCase();
+                                const correctAnswer = input.dataset.answer.toLowerCase();
+                                input.classList.remove('border-green-500', 'border-red-500', 'border-gray-300');
+                                if(userAnswer === ''){
+                                    input.classList.add('border-gray-300');
+                                } else if (userAnswer === correctAnswer) {
+                                    input.classList.add('border-green-500');
+                                } else {
+                                    input.classList.add('border-red-500');
+                                }
+                                input.disabled = false; 
+                            });
+                            if (hintText) hintText.classList.add('hidden'); 
+                        };
+                    }
+
+                    if (showHintBtn) {
+                        showHintBtn.onclick = () => {
+                            if (hintText) hintText.classList.toggle('hidden');
+                        };
+                    }
+
+                    if (showAnswersBtn) {
+                        showAnswersBtn.onclick = () => {
+                            inputs.forEach(input => {
+                                input.value = input.dataset.answer;
+                                input.classList.remove('border-red-500', 'border-gray-300');
+                                input.classList.add('border-green-500');
+                                input.disabled = true; 
+                            });
+                             if (hintText) hintText.classList.add('hidden'); 
+                        };
+                    }
+
+                    if (toggleConjugationBtn && fullConjugation) {
+                        toggleConjugationBtn.onclick = () => {
+                            fullConjugation.classList.toggle('hidden');
+                            if (fullConjugation.classList.contains('hidden')) {
+                                toggleConjugationBtn.textContent = 'Show Full Conjugation';
+                            } else {
+                                toggleConjugationBtn.textContent = 'Hide Full Conjugation';
+                            }
+                        };
+                    } else if (toggleConjugationBtn) {
+                        toggleConjugationBtn.style.display = 'none'; 
+                    }
+                });
+            }
+
+            function initChartsForWeek(weekId) {
+                const chartElement = document.getElementById(`${weekId}Chart`);
+                if (chartData[weekId] && chartElement) {
+                    if (chartElement.chartInstance) {
+                        chartElement.chartInstance.destroy();
+                    }
+                    chartElement.chartInstance = new Chart(chartElement, {
+                        type: 'doughnut',
+                        data: {
+                            labels: chartData[weekId].labels,
+                            datasets: [{
+                                data: chartData[weekId].data,
+                                backgroundColor: ['#d57a66', '#eaddd7', '#f4ece6', '#cc9b8d'],
+                                borderColor: ['#ffffff'],
+                                borderWidth: 2,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                },
+                                title: {
+                                    display: false,
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // --- LLM Phrase Generator Logic ---
+            const generatePhraseBtn = document.getElementById('generate-phrase-btn');
+            const phraseThemeInput = document.getElementById('phrase-theme-input');
+            const generatedPhrasesDiv = document.getElementById('generated-phrases');
+            const loadingSpinner = document.getElementById('loading-spinner');
+
+            generatePhraseBtn.addEventListener('click', async () => {
+                const theme = phraseThemeInput.value.trim();
+                if (!theme) {
+                    generatedPhrasesDiv.innerHTML = '<p class="text-red-500">Please enter a theme to generate phrases.</p>';
+                    return;
+                }
+
+                loadingSpinner.classList.remove('hidden');
+                generatedPhrasesDiv.innerHTML = ''; 
+
+                try {
+                    let chatHistory = [];
+                    const prompt = `Generate 3-5 common Kosovarian Albanian phrases related to the theme: "${theme}". For each phrase, provide the Albanian text and its English translation. Format the output as a JSON array of objects, where each object has 'albanianPhrase' and 'englishTranslation' keys.`;
+                    
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                    
+                    const payload = {
+                        contents: chatHistory,
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        "albanianPhrase": { "type": "STRING" },
+                                        "englishTranslation": { "type": "STRING" }
+                                    },
+                                    "propertyOrdering": ["albanianPhrase", "englishTranslation"]
+                                }
+                            }
+                        }
+                    };
+                    
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        
+                        const jsonString = result.candidates[0].content.parts[0].text;
+                        const phrases = JSON.parse(jsonString);
+
+                        if (phrases.length > 0) {
+                            let htmlContent = '<div class="space-y-4">';
+                            phrases.forEach(phrase => {
+                                htmlContent += `
+                                    <div class="p-4 bg-stone-50 rounded-lg shadow-sm">
+                                        <p class="font-semibold text-lg text-[#d57a66]">${phrase.albanianPhrase}</p>
+                                        <p class="text-gray-700 mt-1">${phrase.englishTranslation}</p>
+                                    </div>
+                                `;
+                            });
+                            htmlContent += '</div>';
+                            generatedPhrasesDiv.innerHTML = htmlContent;
+                        } else {
+                            generatedPhrasesDiv.innerHTML = '<p class="text-gray-600">No phrases generated for this theme. Try a different one!</p>';
+                        }
+
+                    } else {
+                        generatedPhrasesDiv.innerHTML = '<p class="text-red-500">Failed to generate phrases. Please try again.</p>';
+                        console.error('API response structure unexpected:', result);
+                    }
+
+                } catch (error) {
+                    console.error('Error generating phrases:', error);
+                    generatedPhrasesDiv.innerHTML = '<p class="text-red-500">An error occurred while generating phrases. Please check your connection or try again.</p>';
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            });
+
+            // --- Vocabulary Overview Logic ---
+            const vocabSearchInput = document.getElementById('vocab-search-input');
+            const sortAlbanianBtn = document.getElementById('sort-albanian-btn');
+            const sortEnglishBtn = document.getElementById('sort-english-btn');
+            const sortAlbanianIcon = document.getElementById('sort-albanian-icon');
+            const sortEnglishIcon = document.getElementById('sort-english-icon');
+
+            function renderVocabularyOverview(searchTerm = '', sortKey = currentSortKey, direction = sortDirection) {
+                const vocabListTableBody = document.getElementById('vocabulary-list');
+                const noResultsMessage = document.getElementById('no-vocab-results');
+                vocabListTableBody.innerHTML = '';
+
+                let filteredVocab = allVocabData.filter(item =>
+                    item.albanian.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    item.english.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+
+                filteredVocab.sort((a, b) => {
+                    const valA = a[sortKey].toLowerCase();
+                    const valB = b[sortKey].toLowerCase();
+                    if (valA < valB) return -1 * direction;
+                    if (valA > valB) return 1 * direction;
+                    return 0;
+                });
+
+                // Update sort icons
+                sortAlbanianIcon.innerHTML = '&#x2191;&#x2193;';
+                sortEnglishIcon.innerHTML = '&#x2191;&#x2193;';
+                if (sortKey === 'albanian') {
+                    sortAlbanianIcon.innerHTML = direction === 1 ? '&#x2191;' : '&#x2193;';
+                } else if (sortKey === 'english') {
+                    sortEnglishIcon.innerHTML = direction === 1 ? '&#x2191;' : '&#x2193;';
+                }
+
+
+                if (filteredVocab.length === 0) {
+                    noResultsMessage.classList.remove('hidden');
+                } else {
+                    noResultsMessage.classList.add('hidden');
+                    filteredVocab.forEach(item => {
+                        const row = `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.albanian}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.english}</td>
+                            </tr>
+                        `;
+                        vocabListTableBody.innerHTML += row;
+                    });
+                }
+            }
+
+            vocabSearchInput.addEventListener('keyup', (e) => {
+                renderVocabularyOverview(e.target.value, currentSortKey, sortDirection);
+            });
+
+            sortAlbanianBtn.addEventListener('click', () => {
+                if (currentSortKey === 'albanian') {
+                    sortDirection *= -1;
+                } else {
+                    currentSortKey = 'albanian';
+                    sortDirection = 1;
+                }
+                renderVocabularyOverview(vocabSearchInput.value, currentSortKey, sortDirection);
+            });
+
+            sortEnglishBtn.addEventListener('click', () => {
+                if (currentSortKey === 'english') {
+                    sortDirection *= -1;
+                } else {
+                    currentSortKey = 'english';
+                    sortDirection = 1;
+                }
+                renderVocabularyOverview(vocabSearchInput.value, currentSortKey, sortDirection);
+            });
+
+
+            // --- Initial Load ---
+            // On initial load, try to navigate to the hash in the URL. If no hash, default to week1-overview.
+            updateContent(window.location.hash || '#week1-overview');
+        });
+    </script>
+</body>
+</html>
